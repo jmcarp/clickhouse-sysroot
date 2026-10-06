@@ -26,4 +26,16 @@ gtar -C / -cf - \
     "${GCC_LIB_DIR#/}" \
   | gtar -xf - -C "$SYSROOT"
 
+# Clang also needs GCC's startup objects, which live outside the system library
+# directories. Copy them into its sysroot search path so a host GCC installation
+# is not required when cross-compiling.
+for name in crtbegin.o crtend.o crtbeginS.o crtendS.o; do
+  object=$("${GCC:-gcc}" -m64 -print-file-name="$name")
+  if [[ ! -f "$object" ]]; then
+    echo "Cannot find GCC startup object: $name" >&2
+    exit 1
+  fi
+  cp "$object" "$SYSROOT/usr/lib/amd64/$name"
+done
+
 echo "Sysroot refresh complete: $SYSROOT"
